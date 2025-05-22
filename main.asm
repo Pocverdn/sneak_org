@@ -1,25 +1,53 @@
-.model
-.stack
+.model small
+.stack 100h
+
 .data
+    filas equ 9
+    columnas equ 9 ; equ -> Constantes (como los # define en C)
 
-    filas equ 5
-    columnas equ 7 ;equ -> Constantes (como los # define en C)
+    salto db 13, 10, '$'
 
-    array db '*','*','*','*','*','*','*'
-          db '*','*','*','*','*','*','*'
-          db '*','*','*','*','*','*','*'
-          db '*','*','*','*','*','*','*'
-          db '*','*','*','*','*','*','*'
+    array db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
+          db '*','*','*','*','*','*','*','*','*'
 
 .code
 
-    main PROC
+main PROC
+    mov ax, @data
+    mov ds, ax
 
-        mov ax, @data
-        mov ds, ax
+    mov cx, filas
+    lea si, array
 
-    
-        .exit
-    main ENDP
+fila_loop:
+    push cx ; contador de filas
 
-.end main
+    mov cx, columnas ; contador de columnas
+
+columna_loop:
+    mov dl, [si] ; i arr[i] si [si] / Carga el valor de cada parte de la matriz
+    mov ah, 02h  ; funcion para imprimir
+    int 21h
+    inc si ; Avanza a la siguiente casilla
+    loop columna_loop
+
+    ; Imprimir salto de línea
+    lea dx, salto
+    mov ah, 09h
+    int 21h
+
+    pop cx ; cotador de filas
+    loop fila_loop
+
+    mov ah, 4Ch
+    int 21h
+main ENDP
+
+end main
