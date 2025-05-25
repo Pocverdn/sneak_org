@@ -16,9 +16,8 @@
           db '.','.','.','.','.','.','.','.','.'
           db '.','.','.','.','.','.','.','.','.'
 
-    pos db 0      
-    oldpos db 0          
-    oldpos1 db 0        
+    snake db 81 dup(?)  
+    snake_length db 3
     direction db 77
 
 .code
@@ -61,14 +60,23 @@ main ENDP
 
 ; Initialize the game setup
 initialize PROC
-    lea si, array
-    add si, 39
-    mov byte ptr [si], 'x'
+    ; Posición inicial de la serpiente (cabeza en 41, cuerpo en 40 y 39)
+    lea si, snake
+    mov byte ptr [si], 39
     inc si
-    mov byte ptr [si], 'x'
+    mov byte ptr [si], 40
     inc si
-    mov byte ptr [si], 'X'
-    mov pos, 41
+    mov byte ptr [si], 41
+
+    ; Dibujar la serpiente en el array
+    lea di, array
+    add di, 39
+    mov byte ptr [di], 'x'
+    inc di
+    mov byte ptr [di], 'x'
+    inc di
+    mov byte ptr [di], 'X'
+
     ret
 initialize ENDP
 
@@ -118,63 +126,67 @@ right: mov direction, 77
 get_input ENDP
 
 move_player PROC
-    ; Save tail history
-    mov al, oldpos
-    mov oldpos1, al        ; oldpos1 = oldpos
-
-    mov al, pos
-    mov oldpos, al         ; oldpos = pos
-
-    ; Clear previous head from array
+    ; Borrar la última posición de la cola (si no crece)
+    lea si, snake
     xor bx, bx
-    mov bl, pos            ; zero-extend pos (byte) into bx
-    lea si, array
+    mov bl, snake_length
+    dec bl
     add si, bx
-    mov byte ptr [si], '.' ; clear current head
+    mov al, [si]
+    lea di, array
+    add di, ax
+    mov byte ptr [di], '.' 
 
-    ; Update pos based on direction
-    mov al, pos
-    cmp direction, 77      ; RIGHT
+    ; Mover todas las posiciones hacia atrás
+    mov cl, snake_length
+    dec cl
+    lea si, snake
+    add si, cx
+    mov di, si
+    inc di
+shift_loop:
+    mov al, [si-1]          ; posición anterior
+    mov [si], al            ; mover hacia atrás
+    dec si
+    loop shift_loop
+
+    ; Actualizar la cabeza según dirección
+    lea si, snake
+    mov al, [si+1]          ; posición anterior de la cabeza
+    cmp direction, 77       ; RIGHT
     jne not_right
     inc al
 not_right:
-    cmp direction, 75      ; LEFT
+    cmp direction, 75       ; LEFT
     jne not_left
     dec al
 not_left:
-    cmp direction, 72      ; UP
+    cmp direction, 72       ; UP
     jne not_up
-    mov bl, columnas
-    sub al, bl
+    sub al, columnas
 not_up:
-    cmp direction, 80      ; DOWN
+    cmp direction, 80       ; DOWN
     jne not_down
-    mov bl, columnas
-    add al, bl
+    add al, columnas
 not_down:
+    mov [si], al            ; guardar nueva cabeza
 
-    mov pos, al
-
-    ; Draw new head
-    xor bx, bx
-    mov bl, pos
-    lea si, array
-    add si, bx
-    mov byte ptr [si], 'X'
-
-    ; Draw first tail (oldpos)
-    xor bx, bx
-    mov bl, oldpos
-    lea si, array
-    add si, bx
-    mov byte ptr [si], 'x'
-
-    ; Draw second tail (oldpos1)
-    xor bx, bx
-    mov bl, oldpos1
-    lea si, array
-    add si, bx
-    mov byte ptr [si], 'x'
+    ; Dibujar la serpiente en el tablero
+    lea si, snake
+    mov cl, snake_length
+draw_loop:
+    mov bl, [si]            ; posición en el tablero
+    lea di, array
+    add di, bx
+    cmp cl, snake_length    ; si es la cabeza
+    je draw_head
+    mov byte ptr [di], 'x'  ; cuerpo
+    jmp next_segment
+draw_head:
+    mov byte ptr [di], 'X'  ; cabeza
+next_segment:
+    inc si
+    loop draw_loop
 
     ret
 move_player ENDP
