@@ -19,7 +19,7 @@
     pos db 0      
     oldpos db 0          
     oldpos1 db 0        
-    direction db 80
+    direction db 77
 
 .code
 
@@ -28,13 +28,14 @@ main PROC
     mov ds, ax
 
     call initialize
-    call ramdom
+    ;call ramdom
     call tablero
 
 main_loop:
     ; Check for input and move player
     call get_input      ; This will update direction based on input
     call move_player    ; Moves the player according to the direction
+    call limpiar_pantalla
     call tablero        ; Draw the updated game board
     call delay_1_sec    ; Wait for 1 second to create the "tick"
 
@@ -61,7 +62,7 @@ main ENDP
 ; Initialize the game setup
 initialize PROC
     lea si, array
-    mov si, 39
+    add si, 39
     mov byte ptr [si], 'x'
     inc si
     mov byte ptr [si], 'x'
@@ -218,5 +219,13 @@ wait_tick:
     jl wait_tick
     ret
 delay_1_sec ENDP
+
+; Función para limpiar pantalla
+limpiar_pantalla PROC
+    mov ah, 0
+    mov al, 3
+    int 10h
+    ret
+limpiar_pantalla ENDP
 
 end main
