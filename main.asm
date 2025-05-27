@@ -27,7 +27,7 @@ main PROC
     mov ds, ax
 
     call initialize
-    ;call ramdom
+    call ramdom
     call tablero
 
 main_loop:
@@ -36,7 +36,9 @@ main_loop:
     call move_player    ; Moves the player according to the direction
     call limpiar_pantalla
     call tablero        ; Draw the updated game board
+    call print_snake_length
     call delay_1_sec    ; Wait for 1 second to create the "tick"
+    call get_input 
 
     ; Check if a key was pressed
     mov ah, 01h
@@ -104,13 +106,13 @@ get_input PROC
     int 16h
 
     ; Arrow key detection
-    cmp al, 72      ; UP arrow (ASCII 72)
+    cmp al, 'w'
     je up
-    cmp al, 80      ; DOWN arrow (ASCII 80)
+    cmp al, 's'
     je down
-    cmp al, 75      ; LEFT arrow (ASCII 75)
+    cmp al, 'a'
     je left
-    cmp al, 77      ; RIGHT arrow (ASCII 77)
+    cmp al, 'd'
     je right
 no_input:
     ret
@@ -125,32 +127,59 @@ right: mov direction, 77
         ret
 get_input ENDP
 
+print_snake_length PROC
+    mov ah, 02h
+    mov dl, 13      ; retorno de carro
+    int 21h
+    mov dl, 10      ; salto de línea
+    int 21h
+
+    mov dl, 'L'
+    int 21h
+    mov dl, '='
+    int 21h
+
+    mov al, snake_length
+    call print_number
+
+    ret
+print_snake_length ENDP
+
+print_number PROC
+    add al, '0'     ; convierte a carácter
+    mov dl, al
+    mov ah, 02h
+    int 21h
+    ret
+print_number ENDP
+
 move_player PROC
-    ; Borrar la última posición de la cola (si no crece)
+    ; Primero: Borrar el último segmento de la cola
     lea si, snake
-    xor bx, bx
     mov bl, snake_length
     dec bl
-    add si, bx
-    mov al, [si]
+    xor bh, bh
+    add si, bx              ; Apuntar al último segmento
+    mov bl, [si]            ; Obtener posición del último segmento
     lea di, array
-    add di, ax
-    mov byte ptr [di], '.' 
+    add di, bx
+    mov byte ptr [di], '.'   ; Borrar la posición anterior
 
-    ; Mover todas las posiciones hacia atrás
+    ; Segundo: Mover todas las posiciones hacia atrás
     mov cl, snake_length
     dec cl
     lea si, snake
     add si, cx
     mov di, si
     inc di
+
 shift_loop:
     mov al, [si-1]          ; posición anterior
     mov [si], al            ; mover hacia atrás
     dec si
     loop shift_loop
 
-    ; Actualizar la cabeza según dirección
+    ; Tercero: Actualizar la cabeza según dirección
     lea si, snake
     mov al, [si+1]          ; posición anterior de la cabeza
     cmp direction, 77       ; RIGHT
@@ -171,7 +200,7 @@ not_up:
 not_down:
     mov [si], al            ; guardar nueva cabeza
 
-    ; Dibujar la serpiente en el tablero
+    ; Cuarto: Dibujar la serpiente en el tablero
     lea si, snake
     mov cl, snake_length
 draw_loop:
@@ -180,7 +209,7 @@ draw_loop:
     add di, bx
     cmp cl, snake_length    ; si es la cabeza
     je draw_head
-    mov byte ptr [di], 'x'  ; cuerpo
+    mov byte ptr [di], 'o'  ; cuerpo
     jmp next_segment
 draw_head:
     mov byte ptr [di], 'X'  ; cabeza
@@ -190,7 +219,6 @@ next_segment:
 
     ret
 move_player ENDP
-
 
 ; Function to render the board
 tablero PROC
