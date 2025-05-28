@@ -60,9 +60,9 @@ exit_game:
 main ENDP
 
 
-; Initialize the game setup
+; Inicializa una serpiente de tres segmentos
 initialize PROC
-    ; Posición inicial de la serpiente (cabeza en 41, cuerpo en 40 y 39)
+    ; Posicisiones iniciales de la serpiente
     lea si, snake
     mov byte ptr [si], 39
     inc si
@@ -70,7 +70,7 @@ initialize PROC
     inc si
     mov byte ptr [si], 41
 
-    ; Dibujar la serpiente en el array
+    ; Se dibuja la serpiente en el array
     lea di, array
     add di, 39
     mov byte ptr [di], 'x'
@@ -82,30 +82,36 @@ initialize PROC
     ret
 initialize ENDP
 
-; Random function to place the '@' in the array
+; Posiciona una comida '@' en una posición aleatoria
 ramdom PROC
+generar:
     mov ah, 00h
-    int 1Ah ; Get the current time from the clock (DX contains random value)
+    int 1Ah ; Se usa el tiempo del reloj para asemejar un comportamiento aleatorio
     mov ax, dx
     xor dx, dx
     mov cx, 81
-    div cx ; Divide by 81 (map to grid size)
+    div cx ; Divido por el numero de casillas del tablero (81)
+    mov bx, dx
+    
+    ; Revisamos que la posición sea un '.' para evitar que se genere dentro de la serpiente
     lea si, array
-    add si, dx
+    add si, bx
+    cmp byte ptr [si], '.'
+    jne generar
+
     mov byte ptr [si], '@'
     ret
 ramdom ENDP
 
-; Function to get input from the user
+; Función para obtener las entradas (Teclas)
 get_input PROC
     mov ah, 01h
-    int 16h         ; Check if a key is pressed
-    jz no_input     ; If no key is pressed, skip the input handling
+    int 16h         ; Revisa si una tecla se oprime
+    jz no_input     ; En caso de que no se oprima ninguna tecla
 
-    mov ah, 00h     ; Read the pressed key
+    mov ah, 00h     ; Lee la tecla presionada
     int 16h
 
-    ; Arrow key detection
     cmp al, 'w'
     je up
     cmp al, 's'
@@ -114,22 +120,27 @@ get_input PROC
     je left
     cmp al, 'd'
     je right
+
 no_input:
     ret
 
-up:    mov direction, 72
-        ret
-down:  mov direction, 80
-        ret
-left:  mov direction, 75
-        ret
-right: mov direction, 77
-        ret
+up:     
+    mov direction, 72
+    ret
+down:   
+    mov direction, 80
+    ret
+left:   
+    mov direction, 75
+    ret
+right:  
+    mov direction, 77
+    ret
 get_input ENDP
 
 print_snake_length PROC
     mov ah, 02h
-    mov dl, 13      ; retorno de carro
+    mov dl, 13
     int 21h
     mov dl, 10      ; salto de línea
     int 21h
@@ -154,18 +165,18 @@ print_number PROC
 print_number ENDP
 
 move_player PROC
-    ; Primero: Borrar el último segmento de la cola
+    ; Cada vez que la serpiente se mueve, se borra la posción del ultimo segmeto
     lea si, snake
     mov bl, snake_length
     dec bl
     xor bh, bh
-    add si, bx              ; Apuntar al último segmento
-    mov bl, [si]            ; Obtener posición del último segmento
+    add si, bx              ; Ultimo segmento de la serpiente
+    mov bl, [si]            ; Posición del último segmento
     lea di, array
     add di, bx
-    mov byte ptr [di], '.'   ; Borrar la posición anterior
+    mov byte ptr [di], '.'   ; Se cambia el o por un .
 
-    ; Segundo: Mover todas las posiciones hacia atrás
+    ; Se Mueven todas las posiciones hacia atrás
     mov cl, snake_length
     dec cl
     lea si, snake
@@ -175,13 +186,13 @@ move_player PROC
 
 shift_loop:
     mov al, [si-1]          ; posición anterior
-    mov [si], al            ; mover hacia atrás
+    mov [si], al            ; Se mueve hacia atras
     dec si
     loop shift_loop
 
-    ; Tercero: Actualizar la cabeza según dirección
+    ; Se actualiza la cabeza segun direccion
     lea si, snake
-    mov al, [si+1]          ; posición anterior de la cabeza
+    mov al, [si+1]          ; casilla despues de la cabeza
     cmp direction, 77       ; RIGHT
     jne not_right
     inc al
@@ -200,11 +211,11 @@ not_up:
 not_down:
     mov [si], al            ; guardar nueva cabeza
 
-    ; Cuarto: Dibujar la serpiente en el tablero
+    ; Se Dibuja la serpiente en el tablero
     lea si, snake
     mov cl, snake_length
 draw_loop:
-    mov bl, [si]            ; posición en el tablero
+    mov bl, [si]            ; posicion en el tablero
     lea di, array
     add di, bx
     cmp cl, snake_length    ; si es la cabeza
@@ -220,7 +231,7 @@ next_segment:
     ret
 move_player ENDP
 
-; Function to render the board
+; Función para imprimir el tablero
 tablero PROC
     mov cx, filas
     lea si, array
