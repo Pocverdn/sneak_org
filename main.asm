@@ -172,6 +172,7 @@ move_player PROC
     xor bh, bh
     add si, bx              ; Ultimo segmento de la serpiente
     mov bl, [si]            ; Posición del último segmento
+
     lea di, array
     add di, bx
     mov byte ptr [di], '.'   ; Se cambia el o por un .
@@ -210,10 +211,38 @@ not_up:
     add al, columnas
 not_down:
     mov [si], al            ; guardar nueva cabeza
+    mov bl, al
 
     ; Se Dibuja la serpiente en el tablero
     lea si, snake
     mov cl, snake_length
+
+    ; Verifica si hay comida 
+    lea di, array
+    add di, bx
+    cmp byte ptr [di], '@'
+    jne no_food
+
+    ; Si hay comida, incrementa la longitud de la serpiente
+    inc snake_length
+    call ramdom
+    jmp skip_clear
+
+no_food:
+    lea si, snake
+    mov bl, snake_length
+    dec bl
+    xor bh, bh
+    add si, bx
+    mov bl, [si]
+    lea di, array
+    add di, bx
+    mov byte ptr [di], '.'
+
+skip_clear:
+    lea si, snake
+    mov cl, snake_length
+ 
 draw_loop:
     mov bl, [si]            ; posicion en el tablero
     lea di, array
