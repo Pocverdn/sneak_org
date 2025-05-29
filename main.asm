@@ -5,6 +5,7 @@
     filas equ 9
     columnas equ 9
     salto db 13, 10, '$'
+    gameover_msg db 13, 10, '¡GAME OVER!$'
 
     array db '.','.','.','.','.','.','.','.','.'
           db '.','.','.','.','.','.','.','.','.'
@@ -210,6 +211,14 @@ not_up:
     jne not_down
     add al, columnas
 not_down:
+    ; Detecta si la serpiente se "Mordio" a si misma
+    mov bl, al
+    lea di, array
+    add di, bx
+    cmp byte ptr [di], 'o'
+    je game_over
+    
+    
     mov [si], al            ; guardar nueva cabeza
     mov bl, al
 
@@ -307,5 +316,20 @@ limpiar_pantalla PROC
     int 10h
     ret
 limpiar_pantalla ENDP
+
+game_over PROC
+    call limpiar_pantalla
+
+    mov dx, offset gameover_msg
+    mov ah, 09h
+    int 21h
+
+    ; Esperar tecla para salir
+    mov ah, 00h
+    int 16h
+
+    mov ah, 4Ch
+    int 21h
+game_over ENDP
 
 end main
