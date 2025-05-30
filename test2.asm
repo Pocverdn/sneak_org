@@ -33,26 +33,26 @@ main PROC
 
 main_loop:
     ; Check for input and move player
-    call get_input      ; This will update direction based on input
-    call move_player    ; Moves the player according to the direction
+    call get_input      ; Actualizar direcion
+    call move_player    ; Mover el jugador de acuerdo a la dirrecion
     call limpiar_pantalla
-    call tablero        ; Draw the updated game board
+    call tablero        ; Dibujar tablero
     call print_snake_length
-    call delay_1_sec    ; Wait for 1 second to create the "tick"
+    call delay_1_sec    ; Esperar un segundo para 1 tick
     call get_input 
 
-    ; Check if a key was pressed
+    ; Revisar si se oprimio una tecla
     mov ah, 01h
-    int 16h             ; Check if any key is pressed (AH = 1 means key pressed)
-    jz main_loop        ; If no key is pressed, continue the loop
+    int 16h             ; ah=1 se oprimio
+    jz main_loop        ; Si ninguna llave se oprime continuar loop
 
     ; Get the key pressed
     mov ah, 00h
-    int 16h             ; Read the key
-    cmp al, 27          ; If the key is 'Esc' (ASCII 27)
-    je exit_game        ; Exit the game if 'Esc' is pressed
+    int 16h             ; lear la llave
+    cmp al, 27          ; si la llave es 'Esc' (ASCII 27)
+    je exit_game        ; Salir del juego si se presione
 
-    jmp main_loop       ; Otherwise, continue looping
+    jmp main_loop       ; De lo contrario seguir normal
 
 exit_game:
     mov ah, 4Ch         ; Exit the program
@@ -169,7 +169,7 @@ move_player PROC
     ; Posicion de cabeza vieja 
     lea si, snake
     mov al, [si]            ; current head pos
-    mov old_head, al        ; save old head for wrap check
+    mov old_head, al        ; salvar old head for wrap check
     
     ; Cada vez que la serpiente se mueve, se borra la posción del ultimo segmeto
     lea si, snake
@@ -194,13 +194,13 @@ move_player PROC
 shift_loop:
     mov al, [si-1]          ; posición anterior
     mov [si], al            ; Se mueve hacia atras
-    
+    ;Revisar limite superior
     cmp al, 0
-    jl game_over          ; If new head < 0, snake went off the top
+    jl game_over          ; Se paso el la raya 
 
-    ; Check lower boundary (bottom row)
-    cmp al, 81            ; 81 = total cells in 9x9 board
-    jge game_over         ; If new head >= 81, snake went off the bottom
+    ; Revisar limite inferior (bottom row)
+    cmp al, 81            
+    jge game_over         
 
     dec si
     loop shift_loop
@@ -234,7 +234,7 @@ not_down:
     cmp byte ptr [di], 'o'
     je game_over
 
-    ; Check lateral wrap only if moving left or right
+    ; Revisar golpe de muro en la derech y izquierda
     cmp direction, 75       ; LEFT
     je check_row_wrap
     cmp direction, 77       ; RIGHT
@@ -245,7 +245,7 @@ check_row_wrap:
     mov al, [si]
     xor ah, ah
 
-    push bx             ; Save BX (so we keep BL = columnas)
+    push bx             ; Salvar BX
     mov bl, columnas
     div bl
     mov cl, al
@@ -253,7 +253,7 @@ check_row_wrap:
     mov al, old_head
     xor ah, ah
     div bl
-    pop bx              ; Restore BX
+    pop bx              ; Restaurar BX
     cmp cl, al
     jne game_over
     
@@ -333,7 +333,7 @@ columna_loop:
     ret
 tablero ENDP
 
-; Delay function for 1 second
+; Delay
 delay_1_sec PROC
     mov ah, 00h
     int 1Ah
