@@ -39,6 +39,7 @@ main_loop:
     call move_player    ; Mover el jugador de acuerdo a la dirrecion
     call limpiar_pantalla
     call tablero        ; Dibujar tablero
+    ;call print_snake_length
     call delay_1_sec    ; Esperar un segundo para 1 tick
     call get_input 
 
@@ -199,7 +200,7 @@ shift_loop:
     jl game_over          ; Se paso el la raya 
 
     ; Revisar limite inferior (bottom row)
-    cmp al, 81            
+    cmp al, 80            
     jge game_over         
 
     dec si
@@ -272,6 +273,7 @@ skip_wrap_check:
     ; Si hay comida, incrementa la longitud de la serpiente
     inc snake_length
     inc points
+    call beep
     call ramdom
     jmp skip_clear
 
@@ -358,12 +360,13 @@ limpiar_pantalla ENDP
 
 game_over PROC
     call limpiar_pantalla
+    call beep
 
-    mov dx, offset puntaje_msg
-    mov ah, 09h
-    int 21h
+    ;mov dx, offset puntaje_msg
+    ;mov ah, 09h
+    ;int 21h
 
-    mov al, points
+    ;mov al, points
     ;call print_number
 
 
@@ -378,5 +381,32 @@ game_over PROC
     mov ah, 4Ch
     int 21h
 game_over ENDP
+
+beep PROC
+    mov al, 182        ; Configuración del canal
+    out 43h, al
+
+    mov ax, 2153       ; Frecuencia del audio
+
+    out 42h, al        ; Configuración del audio
+    mov al, ah
+    out 42h, al
+
+    in al, 61h
+    or al, 3           ; Conecta al altavoz
+    out 61h, al
+
+    ; retardo para que se escuche el beep
+    mov cx, 0FFFFh
+
+beep_delay:
+    loop beep_delay
+
+    in al, 61h
+    and al, 0FCh        ; Apaga altavoz
+    out 61h, al
+
+    ret
+beep ENDP
 
 end main
