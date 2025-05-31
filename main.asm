@@ -6,6 +6,7 @@
     columnas equ 9
     salto db 13, 10, '$'
     gameover_msg db 13, 10, '¡GAME OVER!$'
+    puntaje_msg db 13, 10, 'Puntaje:$'
 
     array db '.','.','.','.','.','.','.','.','.'
           db '.','.','.','.','.','.','.','.','.'
@@ -19,8 +20,9 @@
 
     snake db 81 dup(?)  
     snake_length db 3
+    points db 0
     direction db 77
-
+    old_head db 0
 .code
 
 main PROC
@@ -33,26 +35,25 @@ main PROC
 
 main_loop:
     ; Check for input and move player
-    call get_input      ; This will update direction based on input
-    call move_player    ; Moves the player according to the direction
+    call get_input      ; Actualizar direcion
+    call move_player    ; Mover el jugador de acuerdo a la dirrecion
     call limpiar_pantalla
-    call tablero        ; Draw the updated game board
-    call print_snake_length
-    call delay_1_sec    ; Wait for 1 second to create the "tick"
+    call tablero        ; Dibujar tablero
+    call delay_1_sec    ; Esperar un segundo para 1 tick
     call get_input 
 
-    ; Check if a key was pressed
+    ; Revisar si se oprimio una tecla
     mov ah, 01h
-    int 16h             ; Check if any key is pressed (AH = 1 means key pressed)
-    jz main_loop        ; If no key is pressed, continue the loop
+    int 16h             ; ah=1 se oprimio
+    jz main_loop        ; Si ninguna llave se oprime continuar loop
 
     ; Get the key pressed
     mov ah, 00h
-    int 16h             ; Read the key
-    cmp al, 27          ; If the key is 'Esc' (ASCII 27)
-    je exit_game        ; Exit the game if 'Esc' is pressed
+    int 16h             ; lear la llave
+    cmp al, 27          ; si la llave es 'Esc' (ASCII 27)
+    je exit_game        ; Salir del juego si se presione
 
-    jmp main_loop       ; Otherwise, continue looping
+    jmp main_loop       ; De lo contrario seguir normal
 
 exit_game:
     mov ah, 4Ch         ; Exit the program
@@ -65,18 +66,18 @@ main ENDP
 initialize PROC
     ; Posicisiones iniciales de la serpiente
     lea si, snake
-    mov byte ptr [si], 39
+    mov byte ptr [si], 41
     inc si
     mov byte ptr [si], 40
     inc si
-    mov byte ptr [si], 41
+    mov byte ptr [si], 39
 
     ; Se dibuja la serpiente en el array
     lea di, array
     add di, 39
-    mov byte ptr [di], 'x'
+    mov byte ptr [di], 'o'
     inc di
-    mov byte ptr [di], 'x'
+    mov byte ptr [di], 'o'
     inc di
     mov byte ptr [di], 'X'
 
@@ -146,12 +147,11 @@ print_snake_length PROC
     mov dl, 10      ; salto de línea
     int 21h
 
-    mov dl, 'L'
-    int 21h
-    mov dl, '='
+    mov dx, offset puntaje_msg
+    mov ah, 09h
     int 21h
 
-    mov al, snake_length
+    mov al, points
     call print_number
 
     ret
@@ -166,6 +166,11 @@ print_number PROC
 print_number ENDP
 
 move_player PROC
+    ; Posicion de cabeza vieja 
+    lea si, snake
+    mov al, [si]            ; current head pos
+    mov old_head, al        ; salvar old head for wrap check
+    
     ; Cada vez que la serpiente se mueve, se borra la posción del ultimo segmeto
     lea si, snake
     mov bl, snake_length
@@ -189,12 +194,20 @@ move_player PROC
 shift_loop:
     mov al, [si-1]          ; posición anterior
     mov [si], al            ; Se mueve hacia atras
+    ;Revisar limite superior
+    cmp al, 0
+    jl game_over          ; Se paso el la raya 
+
+    ; Revisar limite inferior (bottom row)
+    cmp al, 81            
+    jge game_over         
+
     dec si
     loop shift_loop
 
     ; Se actualiza la cabeza segun direccion
     lea si, snake
-    mov al, [si+1]          ; casilla despues de la cabeza
+    mov al, [si]          ; casilla despues de la cabeza
     cmp direction, 77       ; RIGHT
     jne not_right
     inc al
@@ -211,16 +224,40 @@ not_up:
     jne not_down
     add al, columnas
 not_down:
+    mov [si], al            ; guardar nueva cabeza
+    mov bl, al
+
     ; Detecta si la serpiente se "Mordio" a si misma
     mov bl, al
     lea di, array
     add di, bx
     cmp byte ptr [di], 'o'
     je game_over
+
+    ; Revisar golpe de muro en la derech y izquierda
+    cmp direction, 75       ; LEFT
+    je check_row_wrap
+    cmp direction, 77       ; RIGHT
+    je check_row_wrap
+    jmp skip_wrap_check
+
+check_row_wrap:
+    mov al, [si]
+    xor ah, ah
+
+    push bx             ; Salvar BX
+    mov bl, columnas
+    div bl
+    mov cl, al
+
+    mov al, old_head
+    xor ah, ah
+    div bl
+    pop bx              ; Restaurar BX
+    cmp cl, al
+    jne game_over
     
-    
-    mov [si], al            ; guardar nueva cabeza
-    mov bl, al
+skip_wrap_check:
 
     ; Se Dibuja la serpiente en el tablero
     lea si, snake
@@ -234,6 +271,7 @@ not_down:
 
     ; Si hay comida, incrementa la longitud de la serpiente
     inc snake_length
+    inc points
     call ramdom
     jmp skip_clear
 
@@ -260,6 +298,7 @@ draw_loop:
     je draw_head
     mov byte ptr [di], 'o'  ; cuerpo
     jmp next_segment
+
 draw_head:
     mov byte ptr [di], 'X'  ; cabeza
 next_segment:
@@ -295,7 +334,7 @@ columna_loop:
     ret
 tablero ENDP
 
-; Delay function for 1 second
+; Delay
 delay_1_sec PROC
     mov ah, 00h
     int 1Ah
@@ -319,6 +358,14 @@ limpiar_pantalla ENDP
 
 game_over PROC
     call limpiar_pantalla
+
+    mov dx, offset puntaje_msg
+    mov ah, 09h
+    int 21h
+
+    mov al, points
+    ;call print_number
+
 
     mov dx, offset gameover_msg
     mov ah, 09h
